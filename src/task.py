@@ -12,7 +12,8 @@ from src.srt_util.srt import SrtScript
 from src.srt_util.srt2ass import srt2ass
 from time import time, strftime, gmtime, sleep
 from src.translators.translation import get_translation, prompt_selector
-from src.ASR.ASR import get_transcript
+#from src.ASR.ASR import get_transcript
+from scr.ASR_template.transcribe import cli
 
 import shutil
 from datetime import datetime
