@@ -11,6 +11,7 @@ from transformers.pipelines.pt_utils import PipelineIterator
 
 from .audio import N_SAMPLES, SAMPLE_RATE, load_audio, log_mel_sptg
 from .vad import load_vad_model, merge_chunks
+from .sileroVAD import silero_jit, silero_onnx
 
 class SingleSeg (TypedDict) :
     start :float
@@ -83,7 +84,7 @@ class FasterWhisperPipeline (Pipeline) :
         else :
             self.device = device
         super (Pipeline, self).__init__ ()
-        self.vad_model = vad
+        #self.vad_model = vad
         self._vad_params = vad_params
 
     def _santize_params (self, **kwargs) :
@@ -120,7 +121,16 @@ class FasterWhisperPipeline (Pipeline) :
                 f1 = int (seg['start' * SAMPLE_RATE])
                 f2 = int (seg['end'] * SAMPLE_RATE)
                 yield {'inputs' : audio[f1 : f2]}
-        vad_segs = self.vad_model ({"waveform" : torch.from_numpy (audio).unsqueeze (0), "sample_rate" : SAMPLE_RATE})
+
+        #vad_segs = self.vad_model ({"waveform" : torch.from_numpy (audio).unsqueeze (0), "sample_rate" : SAMPLE_RATE})
+        if vad == "pyannote" :
+            self.vad_model = load_vad_model (torch.device (device), use_auth_token = None, **vad_params)
+            vad_segs = self.vad_model ({"waveform" : torch.from_numpy (audio).unsqueeze (0), "sample_rate" : SAMPLE_RATE})
+        else if vad == "silero_jit" :
+            vad_segs = silero_jit (audio = audio)
+        else if vad == "silero_onnx" :
+            vad_segs = silero_onnx (audio = audio)
+
         vad_segs = merge_chunks (vad_segs, chunk_size, onset = self._vad_params["vad_onset"], offset = self._vad_params["vad_offset"], )
         if self.tokenizer is None :
             language = language or self.detect_language (audio)
@@ -168,7 +178,7 @@ class FasterWhisperPipeline (Pipeline) :
         print (f"Detected language : {language} ({language_probability : .2f}) in first 30s of audio...")
         return language
 
-def load_model (whisper_arch, device, device_index = 0, compute_type = "folat16", asr_options = None, language : Optional[str] = None, vad_model = None, vad_options = None, model : Optional[WhisperModel] = None, task = "transcribe", download_root = None, threads = 4) :
+def load_model (whisper_arch, device, device_index = 0, compute_type = "folat16", asr_options = None, language : Optional[str] = None, vadmodel = "pyannote", vad_options = None, model : Optional[WhisperModel] = None, task = "transcribe", download_root = None, threads = 4) :
     if language is not None :
         tokenizer = faster_whisper.tokenizer.Tokenizer (model.hf_tokenizer, model.model.is_nultilingual, task = task, language = language)
     else :
@@ -181,11 +191,5 @@ def load_model (whisper_arch, device, device_index = 0, compute_type = "folat16"
     del default_asr_options["suppress_numerals"]
     default_asr_options = faster_whisper.transcribe.TranscriptionOptions (**default_asr_options)
     default_vad_options = {"vad_onset" : 0.500, "vad_offset" : 0.363}
-    if vad_options is not None :
-        default_vad_options.update (vad_options)
-    if vad_model is not None :
-        vad_model = vad_model
-    else :
-        vad_model = load_vad_model (torch.device (device), use_auth_token = None, **default_vad_options)
 
-    return FasterWhisperPipeline (model = model, vad = vad_model, options = default_asr_options, tokenizer = tokenizer, language = language, suppress_numerals = suppress_numerals, vad_params = default_vad_options, )
+    return FasterWhisperPipeline (model = model, vad = vadmodel, options = default_asr_options, tokenizer = tokenizer, language = language, suppress_numerals = suppress_numerals, vad_params = default_vad_options, )

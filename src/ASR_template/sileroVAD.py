@@ -3,8 +3,6 @@ import logging
 from silero_utils_vad import read_audio, init_jit_model, OnnxWrapper
 from silero_utils_vad import get_speech_timestamps as gst
 
-logging.basicConfig (level = logging.DEBUG)
-log = logging.getLogger (__name__)
 
 device = torch.device ('cuda' if torch.cuda.is_available () else 'cpu')
 
@@ -17,7 +15,7 @@ def get_speech_timestamps (source_audio, method = 'silero_onnx'):
 
 
 
-def silero_jit (source_audio, jit_model):
+def silero_jit (source_audio, jit_model = "silero_vad.jit"):
 
     audio = read_audio (source_audio, sampling_rate = 16000).to (device)
     model = init_jit_model (jit_model, device = device)
@@ -31,7 +29,7 @@ def silero_jit (source_audio, jit_model):
     return speech_timestamps
 
 
-def silero_onnx (source_audio, onnx_model): 
+def silero_onnx (source_audio, onnx_model = "silero_vad.onnx"): 
     
     audio = read_audio (source_audio, sampling_rate = 16000).to (device)
     model = OnnxWrapper (onnx_model)
@@ -45,9 +43,3 @@ def silero_onnx (source_audio, onnx_model):
     return speech_timestamps
     
 
-if __name__ == "__main__":
-    audio = "../../samples/3.wav"
-    model = "silero_vad.jit"
-    silero_jit (audio, model)
-    model = "silero_vad.onnx"
-    silero_onnx (audio, model)

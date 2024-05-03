@@ -13,7 +13,7 @@ from src.srt_util.srt2ass import srt2ass
 from time import time, strftime, gmtime, sleep
 from src.translators.translation import get_translation, prompt_selector
 #from src.ASR.ASR import get_transcript
-from scr.ASR_template.transcribe import cli
+from scr.ASR_template.transcribe import get_transcript
 
 import shutil
 from datetime import datetime
@@ -146,7 +146,8 @@ class Task:
         src_srt_path = self.task_local_dir.joinpath(f"task_{self.task_id}_{self.source_lang}.srt")
 
         # get transcript
-        transcript = get_transcript(method, src_srt_path, self.source_lang, self.audio_path, pre_load_asr_model)
+        #transcript = get_transcript(method, src_srt_path, self.source_lang, self.audio_path, pre_load_asr_model)
+        transcript = get_transcript (audio = self.audio_path, model = method, output_dir = src_srt_path)
 
         if transcript != None:  # if the audio is transfered
             if isinstance(transcript, str):
