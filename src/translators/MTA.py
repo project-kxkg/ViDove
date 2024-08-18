@@ -2,7 +2,7 @@ from openai import OpenAI
 from .abs_api_model import AbsApiModel
 
 class MTA(AbsApiModel):
-    def __init__(self, client:OpenAI, model_name:str, domain:str, source_language:str, target_language:str, target_country:str, max_iterations:int=100) -> None:
+    def __init__(self, client:OpenAI, model_name:str, domain:str, source_language:str, target_language:str, target_country:str, logger:str, max_iterations:int=5) -> None:
         super().__init__()
         self.client = client
         if model_name in ["gpt-3.5-turbo", "gpt-4", "gpt-4o"]:
@@ -14,6 +14,7 @@ class MTA(AbsApiModel):
         self.source_language = source_language
         self.target_language = target_language
         self.target_country = target_country
+        self.logger=logger
 
     def send_request(self, input):
         current_iteration = 0
@@ -58,6 +59,8 @@ class MTA(AbsApiModel):
                 )
             suggestion = response.choices[0].message.content
 
+            self.logger.info(suggestion)
+
             # Editor Agent
             prompt = f"""Your task is to carefully read, then edit, a translation of the content in the {history} from {self.source_language} to {self.target_language}, taking into\
             account a list of expert suggestions and constructive criticisms.
@@ -85,8 +88,10 @@ class MTA(AbsApiModel):
                 )
             reply = response.choices[0].message.content
 
+            self.logger.info(reply)
             if history == reply:
                 return reply
             else:
                 history = reply
                 current_iteration += 1
+        return reply
