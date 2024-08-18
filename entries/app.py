@@ -179,7 +179,7 @@ with gr.Blocks() as demo:
         opt_post = gr.CheckboxGroup(["Split Sentence", "Remove Punc"], label="Post-process Module", info="Post-process module settings", value=["Split Sentence", "Remove Punc"])
     with gr.Tab("Translation"):
         gr.Markdown("## Translation Settings:")
-        translation_model = gr.Dropdown(choices=["gpt-3.5-turbo", "gpt-4", "gpt-4o", "SC2 Domain Expert(beta test)"], label="Select Translation Model", value="gpt-4o")
+        translation_model = gr.Dropdown(choices=["gpt-3.5-turbo", "gpt-4", "gpt-4o", "SC2 Domain Expert(beta test)", "Multiagent"], label="Select Translation Model", value="gpt-4o")
         default_chunksize = 2000 if opt_src.value == "EN" else 100
         chunk_size = gr.Number(value=default_chunksize, info="100 for ZH as source language")
     
