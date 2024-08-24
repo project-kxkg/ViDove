@@ -15,7 +15,7 @@ pre_process:
 
 # Translation module config
 translation:
-  model: Multiagent # choices=["gpt-3.5-turbo", "gpt-4", "gpt-4o", "Assistant", "Multiagent"]
+  model: gpt-4 # choices=["gpt-3.5-turbo", "gpt-4", "gpt-4o", "Assistant", "Multiagent"]
   chunk_size: 2000
 
 # post-process module config
