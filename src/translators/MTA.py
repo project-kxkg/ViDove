@@ -74,7 +74,8 @@ class MTA(AbsApiModel):
             (iii) style (by ensuring the translations reflect the style of the source text)
             (iv) terminology (inappropriate for context, inconsistent use), or
             (v) other errors.
-
+            
+            Ensure that the revised translation corresponds line by line with the original sentence.
             Output only the new translation and nothing else."""
 
             response = self.client.chat.completions.create(
