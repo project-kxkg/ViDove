@@ -75,7 +75,6 @@ class MTA(AbsApiModel):
             (iv) terminology (inappropriate for context, inconsistent use), or
             (v) other errors.
             
-            Ensure that the revised translation corresponds with the original sentence.
             Output only the new translation and nothing else."""
 
             response = self.client.chat.completions.create(
