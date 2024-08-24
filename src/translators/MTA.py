@@ -22,7 +22,7 @@ class MTA(AbsApiModel):
 
         # Translator Agent
         translation_prompt = f"""This is an {self.source_language} to {self.target_language} translation in the field of {self.domain}, please provide the {self.target_language} translation for this text.\
-        Do not provide any explanations or text apart from the translation. {self.source_language}: {input} {self.target_language}:"""
+        Do not provide any explanations or text apart from the translation. Ensure that the translation corresponds line by line with the original sentence. {self.source_language}: {input} {self.target_language}:"""
 
         response = self.client.chat.completions.create(
             model=self.model_name,
