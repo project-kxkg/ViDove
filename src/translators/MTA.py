@@ -17,7 +17,8 @@ class MTA(AbsApiModel):
         self.target_country = target_country
         self.logger=logger
 
-    def send_request(self, input):        
+    def send_request(self, input):
+        print("Hello my friend.")
         current_iteration = 0
         history = None
 
