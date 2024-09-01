@@ -18,7 +18,8 @@ class MTA(AbsApiModel):
         self.logger=logger
 
     def send_request(self, input):
-        print(translation_prompt)
+        print(type(translation_prompt))
+        print("Hello Dog dog.")
         print()
         print(reflection_prompt)
         print()
