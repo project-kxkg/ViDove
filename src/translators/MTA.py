@@ -3,7 +3,7 @@ from .abs_api_model import AbsApiModel
 from prompts import translation_prompt, reflection_prompt, editor_prompt
 
 class MTA(AbsApiModel):
-    def __init__(self, client:OpenAI, model_name:str, domain:str, source_language:str, target_language:str, target_country:str, logger:str, max_iterations:int=100) -> None:
+    def __init__(self, client:OpenAI, model_name:str, domain:str, source_language:str, target_language:str, target_country:str, logger:str, max_iterations:int=5) -> None:
         super().__init__()
         self.client = client
         if model_name in ["gpt-3.5-turbo", "gpt-4", "gpt-4o"]:
