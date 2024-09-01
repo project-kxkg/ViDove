@@ -62,7 +62,7 @@ class MTA(AbsApiModel):
             self.logger.info(suggestion)
 
             # Editor Agent
-            prompt = f"""Your task is to carefully read, then edit, a translation of the content in the {history} from {self.source_language} to {self.target_language}, taking into\
+            editor_prompt = f"""Your task is to carefully read, then edit, a translation of the content in the {history} from {self.source_language} to {self.target_language}, taking into\
             account a list of expert suggestions and constructive criticisms.
 
             // Expert Suggestions:
