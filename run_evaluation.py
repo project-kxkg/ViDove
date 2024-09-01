@@ -1,10 +1,12 @@
 import os
 import logging
+from pathlib import Path
 from openai import OpenAI
 from src.translators.LLM import LLM
 from src.translators.MTA import MTA
 from evaluators.comet import CometEvaluator
 import pandas as pd
+import json
 
 from datasets import load_dataset
 
@@ -20,7 +22,7 @@ You should only output the translated text. without any format or markdown text.
 Your translated text:
 """
 
-OUTPUT_PATH = "results"
+OUTPUT_PATH = Path ("results") # Path to save the results
 
 if not os.path.exists(OUTPUT_PATH):
     os.makedirs(OUTPUT_PATH)
@@ -70,7 +72,7 @@ for dataset in DATASETS:
                     "mta_response": mta_response
                 }      
         # Save the results
-        with open(f"results_{model}_{dataset}.json", "w") as f:
-            f.write(results)
+        with open(OUTPUT_PATH / f"{model}.json", "w") as f:
+            json.dump(results, f)
 
 
