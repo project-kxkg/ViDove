@@ -17,14 +17,7 @@ class MTA(AbsApiModel):
         self.target_country = target_country
         self.logger=logger
 
-    def send_request(self, input):
-        print(type(translation_prompt))
-        print("Hello Dog dog.")
-        print()
-        print(reflection_prompt)
-        print()
-        print(editor_prompt)
-        
+    def send_request(self, input):        
         current_iteration = 0
         history = None
 
