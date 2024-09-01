@@ -56,7 +56,7 @@ class MTA(AbsApiModel):
                 messages=[
                     {
                         "role": "user",
-                        "content": prompt
+                        "content": editor_prompt
                         }
                     ]
                 )
