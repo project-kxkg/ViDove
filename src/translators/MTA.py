@@ -1,6 +1,6 @@
 from openai import OpenAI
 from .abs_api_model import AbsApiModel
-from .prompts import translation_prompt, reflection_prompt, editor_prompt
+from .prompts import fixed_translationprompt,fixed_reflectionprompt,fixed_editorprompt
 
 class MTA(AbsApiModel):
     def __init__(self, client:OpenAI, model_name:str, domain:str, source_language:str, target_language:str, target_country:str, logger:str, max_iterations:int=5) -> None:
@@ -20,7 +20,8 @@ class MTA(AbsApiModel):
     def send_request(self, input):
         current_iteration = 0
         history = None
-
+        
+        translation_prompt=fixed_translationprompt(self.source_language,self.target_language,self.domain,input)
         # Translator Agent
         response = self.client.chat.completions.create(
             model=self.model_name,
@@ -35,7 +36,7 @@ class MTA(AbsApiModel):
 
         while current_iteration <= self.max_iterations:
             # Suggestions Agent
-            
+            reflection_prompt=fixed_reflectionprompt(self.source_language,self.target_language,history,self.target_country)
             response =self.client.chat.completions.create(
                 model=self.model_name,
                 messages=[
@@ -50,7 +51,7 @@ class MTA(AbsApiModel):
             self.logger.info(suggestion)
 
             # Editor Agent
-            
+            editor_prompt=fixed_editorprompt(self.source_language,self.target_language,history,suggestion)
             response = self.client.chat.completions.create(
                 model=self.model_name,
                 messages=[
