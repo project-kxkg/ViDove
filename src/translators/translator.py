@@ -42,7 +42,7 @@ class Translator:
         elif self.model_name in ["gpt-3.5-turbo", "gpt-4", "gpt-4o"]:
             self.translator = LLM(self.client, self.model_name, system_prompt = self.system_prompt)
         elif self.model_name == "Multiagent":
-            self.translator = MTA(self.client, "assistant", self.domain, self.src_lang, self.tgt_lang, SUPPORT_LANG_MAP[self.tgt_lang],self.task_logger,self.system_prompt)
+            self.translator = MTA(self.client, "gpt-4", self.domain, self.src_lang, self.tgt_lang, SUPPORT_LANG_MAP[self.tgt_lang],self.task_logger,self.system_prompt)
         else:
             print(f"Unsupported model name: {self.model_name}")
             raise NotImplementedError
