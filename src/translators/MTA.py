@@ -1,12 +1,15 @@
 from openai import OpenAI
 from .abs_api_model import AbsApiModel
 from .prompts import fixed_translationprompt,fixed_reflectionprompt,fixed_editorprompt
+from .assistant import Assistant
+
+
 
 class MTA(AbsApiModel):
-    def __init__(self, client:OpenAI, model_name:str, domain:str, source_language:str, target_language:str, target_country:str, logger:str, max_iterations:int=5) -> None:
+    def __init__(self, client:OpenAI, model_name:str, domain:str, source_language:str, target_language:str, target_country:str, logger:str, system_prompt:str, max_iterations:int=5) -> None:
         super().__init__()
         self.client = client
-        if model_name in ["gpt-3.5-turbo", "gpt-4", "gpt-4o"]:
+        if model_name in ["gpt-3.5-turbo", "gpt-4", "gpt-4o","assistant"]:
             self.model_name = model_name
         else:
             raise NotImplementedError
@@ -16,6 +19,7 @@ class MTA(AbsApiModel):
         self.target_language = target_language
         self.target_country = target_country
         self.logger=logger
+        self.system_prompt=system_prompt
 
     def send_request(self, input):
         current_iteration = 0
@@ -23,16 +27,21 @@ class MTA(AbsApiModel):
         
         translation_prompt=fixed_translationprompt(self.source_language,self.target_language,self.domain,input)
         # Translator Agent
-        response = self.client.chat.completions.create(
-            model=self.model_name,
-            messages=[
-                {
-                    "role": "user",
-                    "content": translation_prompt
-                    }
-                ]
-            )
-        history = response.choices[0].message.content
+        
+        if self.model_name == "assistant":
+            translator = Assistant(self.client, system_prompt = self.system_prompt, domain = "SC2")
+            history = translator.send_request(input)
+        else:
+            response = self.client.chat.completions.create(
+                model=self.model_name,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": translation_prompt
+                        }
+                    ]
+                )
+            history = response.choices[0].message.content
 
         while current_iteration <= self.max_iterations:
             # Suggestions Agent
