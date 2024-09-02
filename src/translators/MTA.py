@@ -18,7 +18,6 @@ class MTA(AbsApiModel):
         self.logger=logger
 
     def send_request(self, input):
-        print("Im god.")
         current_iteration = 0
         history = None
         
@@ -36,6 +35,7 @@ class MTA(AbsApiModel):
         history = response.choices[0].message.content
 
         while current_iteration <= self.max_iterations:
+            print(current_iteration)
             # Suggestions Agent
             reflection_prompt=fixed_reflectionprompt(self.source_language,self.target_language,history,self.target_country)
             response =self.client.chat.completions.create(
