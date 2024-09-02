@@ -18,6 +18,7 @@ class MTA(AbsApiModel):
         self.logger=logger
 
     def send_request(self, input):
+        print("Im god.")
         current_iteration = 0
         history = None
         
