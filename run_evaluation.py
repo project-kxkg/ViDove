@@ -1,3 +1,4 @@
+# %%
 import os
 import logging
 from pathlib import Path
@@ -10,10 +11,11 @@ import json
 
 from datasets import load_dataset
 
+# Setup the init parameters
 logger = logging.getLogger(__name__)
 
 DATASETS = ["hgissbkh/WMT23-Test"] # List of datasets to evaluate on, taken from HuggingFace Datasets
-BASEMODELS = ["gpt-3.5-turbo", "gpt-4", "gpt-4o"] # List of models to evaluate on, taken from OpenAI API
+BASEMODELS = ["gpt-3.5-turbo"] # List of models to evaluate on, taken from OpenAI API "gpt-4", "gpt-4o"
 
 DEFAULT_SYSTEM_PROMPT = """
 You are one expert translator and your task is to translate the following text from {source_lang} to {target_lang}:
@@ -29,16 +31,17 @@ if not os.path.exists(OUTPUT_PATH):
 
 client = OpenAI() # Initialize the OpenAI client
 
-comet_evaluator = CometEvaluator("Unbabel/XCOMET-XL", logger) # Initialize the Comet evaluator
+comet_evaluator = CometEvaluator("Unbabel/wmt22-comet-da", logger, gpus=0) # Initialize the Comet evaluator 
+#Using the default model for development, update to the latest model for the real evaluation Unbabel/XCOMET-XXL (needs to grant access to the model)
 
-test_df = load_dataset(DATASETS[0])["test"].to_pandas() # Load the dataset
-
+# %%
+# Get the responses from two translators
 for dataset in DATASETS:
     for model in BASEMODELS:
         # Load the dataset
         test_df = load_dataset(dataset)["test"].to_pandas()
         source_target_pairs = test_df["lp"].unique()
-        test_df = test_df.sample(10)
+        test_df = test_df.sample(5)
 
         results = {}
         for source_target_pair in source_target_pairs:
@@ -70,9 +73,52 @@ for dataset in DATASETS:
                     "reference": reference,
                     "llm_response": llm_response,
                     "mta_response": mta_response
-                }      
-        # Save the results
-        with open(OUTPUT_PATH / f"{model}.json", "w") as f:
-            json.dump(results, f)
+                }
+
+            # Save the results
+            output_path = OUTPUT_PATH / dataset.split("/")[1] / model / source_target_pair
+            if not os.path.exists(output_path):
+                os.makedirs(output_path)
+            with open(output_path / "results.json", "w") as f:
+                json.dump(results[source_target_pair], f)
 
 
+# %%
+# Run evaluation on the responses by batch size of 8
+# Load the results
+RESULT_PATH = Path("results")
+datasets = os.listdir(RESULT_PATH)
+BASEMODELS = ["gpt-3.5-turbo"]
+
+for dataset in datasets:
+    for model in BASEMODELS:
+        results_list = (RESULT_PATH / dataset / model).rglob("*.json")
+        results = {}
+        for results_file in results_list:
+            with open(results_file, "r") as f:
+                results.update(json.load(f))
+
+        llm_responses = []
+        mta_responses = []
+        for index, response in results.items():
+            llm_responses.append({"src": response["src"], "mt": response["llm_response"], "ref": response["reference"]})
+            mta_responses.append({"src": response["src"], "mt": response["mta_response"], "ref": response["reference"]})
+
+        # Evaluate the responses
+        llm_comet_scores = comet_evaluator.evaluate(llm_responses)
+        mta_comet_scores = comet_evaluator.evaluate(mta_responses)
+
+        # Save the scores
+        scores_df = pd.DataFrame({
+            "llm_comet_scores": llm_comet_scores,
+            "mta_comet_scores": mta_comet_scores
+        })
+
+        if not os.path.exists(OUTPUT_PATH / "scores"):
+            os.makedirs(OUTPUT_PATH / "scores")
+
+        scores_df.to_csv(OUTPUT_PATH / "scores" / f"{dataset}_{model}.csv")
+
+
+
+# %%
