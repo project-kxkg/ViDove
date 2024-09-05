@@ -3,10 +3,13 @@ from .abs_evaluator import AbsApiEvaluator
 from logging import Logger
 
 class CometEvaluator(AbsApiEvaluator):
-    def __init__(self, model_name:str, logger:Logger) -> None:
+    def __init__(self, logger:Logger, model_name:str = "Unbabel/wmt22-comet-da", batch_size:int=8, gpus:int=0, accelerator:str = "auto") -> None:
         super().__init__()
         self.model_name = model_name
         self.logger = logger
+        self.batch_size = batch_size
+        self.accelerator = accelerator
+        self.gpus = gpus
         self.is_loaded = False
         self.model = None
 
@@ -16,10 +19,10 @@ class CometEvaluator(AbsApiEvaluator):
         self.model = model
         self.is_loaded = True
 
-    def evaluate(self, input:str) -> str:
+    def evaluate(self, input:dict) -> str:
 
         if not self.is_loaded:
             self.load_model()
 
-        model_output = self.model.predict(input, batch_size=8, gpus=1)
+        model_output = self.model.predict(input, batch_size=self.batch_size, gpus=self.gpus, accelerator=self.accelerator)
         return model_output
