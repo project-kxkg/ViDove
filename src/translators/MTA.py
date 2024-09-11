@@ -25,7 +25,7 @@ class MTA(AbsApiModel):
         current_iteration = 0
         history = None
         
-        translation_prompt=orignal_translationprompt(self.source_language,self.target_language,self.domain,input)
+        translation_prompt=orignal_translationprompt(self.source_language,self.target_language,input)
         # Translator Agent
         
         if self.model_name == "assistant":
@@ -45,7 +45,7 @@ class MTA(AbsApiModel):
 
         while current_iteration <= self.max_iterations:
             # Suggestions Agent
-            reflection_prompt=orignal_reflectionprompt(self.source_language,self.target_language,history,self.target_country)
+            reflection_prompt=orignal_reflectionprompt(self.source_language,self.target_language,self.target_country,input,history)
             response =self.client.chat.completions.create(
                 model=self.model_name,
                 messages=[
@@ -60,7 +60,7 @@ class MTA(AbsApiModel):
             self.logger.info(suggestion)
 
             # Editor Agent
-            editor_prompt=orignal_editorprompt(self.source_language,self.target_language,history,suggestion)
+            editor_prompt=orignal_editorprompt(self.source_language,self.target_language,input,history,suggestion)
             response = self.client.chat.completions.create(
                 model=self.model_name,
                 messages=[
