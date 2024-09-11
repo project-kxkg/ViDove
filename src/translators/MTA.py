@@ -1,6 +1,6 @@
 from openai import OpenAI
 from .abs_api_model import AbsApiModel
-from .prompts import fixed_translationprompt,fixed_reflectionprompt,fixed_editorprompt
+from .prompts import orignal_translationprompt,orignal_reflectionprompt,orignal_editorprompt
 from .assistant import Assistant
 
 
