@@ -1,4 +1,5 @@
 import os
+from logging import Logger
 
 from llama_index.core import (
     PromptTemplate,
@@ -8,11 +9,11 @@ from llama_index.core import (
     VectorStoreIndex,
     load_index_from_storage,
 )
-from llama_index.core.node_parser import SentenceSplitter
 from llama_index.core.chat_engine.types import (
     AgentChatResponse,
     StreamingAgentChatResponse,
 )
+from llama_index.core.node_parser import SentenceSplitter
 from llama_index.embeddings.openai import OpenAIEmbedding
 from llama_index.llms.openai import OpenAI
 
@@ -38,11 +39,11 @@ SYSTEM_PROMPT = PromptTemplate(
 
 
 class BasicRAG(AbsApiRAG):
-
     def __init__(
         self,
-        source_lang,
-        target_lang,
+        source_lang: str,
+        target_lang: str,
+        logger: Logger,
         domain="starcraft2",
         llm_name: str = "gpt-4o-mini",
         embedding_name: str = "text-embedding-3-small",
@@ -53,23 +54,34 @@ class BasicRAG(AbsApiRAG):
         self.system_prompt = SYSTEM_PROMPT.partial_format(
             source_lang=source_lang, target_lang=target_lang, domain=domain
         )
+        self.logger = logger
         self.loaded = False
 
     def load_model(self):
         Settings.embed_model = self.embeddings
         Settings.llm = self.llm
-        # pass
+        self.logger.info(
+            f"Loading the model, set {Settings.embed_model} as embedding model and {Settings.llm} as the generator"
+        )
         if not os.path.exists(PERSIST_DIR):
+            self.logger.info("Loading the RAG from the scratch")
             documents = SimpleDirectoryReader(DATA_DIR).load_data()
-            index = VectorStoreIndex.from_documents(documents, transformations=[SentenceSplitter(chunk_size=40, chunk_overlap=5)])
+            index = VectorStoreIndex.from_documents(
+                documents,
+                transformations=[SentenceSplitter(chunk_size=40, chunk_overlap=5)],
+            )
             index.storage_context.persist(PERSIST_DIR)
         else:
+            self.logger.info("Loading the RAG from the storage")
             storage_context = StorageContext.from_defaults(persist_dir=PERSIST_DIR)
             index = load_index_from_storage(storage_context)
 
         self.query_engine = index.as_query_engine()
-        self.query_engine.update_prompts({"response_synthesizer:text_qa_template": self.system_prompt})
+        self.query_engine.update_prompts(
+            {"response_synthesizer:text_qa_template": self.system_prompt}
+        )
         self.loaded = True
+        self.logger.info("Model loaded")
 
     def send_request(self, input) -> AgentChatResponse | StreamingAgentChatResponse:
         if not self.loaded:

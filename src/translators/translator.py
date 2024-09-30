@@ -9,6 +9,7 @@ from src.srt_util.srt import split_script
 
 from .assistant import Assistant
 from .LLM import LLM
+from .basic_rag import BasicRAG
 from .MTA import MTA
 
 SUPPORT_LANG_MAP = {
@@ -43,6 +44,8 @@ class Translator:
             self.translator = LLM(self.client, self.model_name, system_prompt = self.system_prompt)
         elif self.model_name == "Multiagent":
             self.translator = MTA(self.client, "gpt-4o", self.domain, self.src_lang, self.tgt_lang, SUPPORT_LANG_MAP[self.tgt_lang],self.task_logger)
+        elif self.model_name == "RAG":
+            self.translator = BasicRAG(self.src_lang, self.tgt_lang, self.task_logger, self.domain, self.model_name)
         else:
             print(f"Unsupported model name: {self.model_name}")
             raise NotImplementedError
