@@ -92,7 +92,7 @@ class TavilyRAG(AbsApiRAG):
 
     def seach_tavily(self, query: str, max_results: int = 3):
         responses = self.tavily_client.search(
-            query, max_results=max_results, search_depth="advanced"
+            query, max_results=max_results, search_depth="advanced", include_domains=[self.domain]
         )
         return [Document(text=result["content"], extra_info={"url": result["url"]}) for result in responses["results"]]
 
@@ -114,9 +114,6 @@ class TavilyRAG(AbsApiRAG):
             query_str=input,
         )
 
-        print(prompt)
-
-
         response = self.llm_client.chat.completions.create(
             model=self.llm_name,
             messages = [{
@@ -125,10 +122,7 @@ class TavilyRAG(AbsApiRAG):
             }]
         ).choices[0].message.content
 
-        # response = self.llm.chat([ChatMessage(role="user", content=prompt)])
-
-
-        return response
+        return response, web_supporting_documents
 
 
 
