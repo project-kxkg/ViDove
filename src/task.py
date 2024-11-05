@@ -17,6 +17,7 @@ from src.srt_util.srt2ass import srt2ass
 from time import time, strftime, gmtime, sleep
 from src.translators.translator import Translator
 from src.ASR.ASR import get_transcript
+from src.SD import get_speaker_info
 from openai import OpenAI
 
 import shutil
@@ -68,6 +69,10 @@ class Task:
         self.ASR_setting = task_cfg["ASR"]
         self.translation_setting = task_cfg["translation"]
         self.translation_model = self.translation_setting["model"]
+
+        # Multiagent setting TODO: adjust for situation that don't use MTA
+        # why can't save task_cfg itself into self?
+        self.MTA_setting = task_cfg["MTA"]
         
         self.output_type = task_cfg["output_type"]
         self.target_lang = task_cfg["target_lang"]
@@ -203,6 +208,11 @@ class Task:
             self.SRT_Script.write_srt_file_src(src_srt_path)
         else:
             raise RuntimeError(f"Failed to get transcript from audio file: {self.audio_path}")
+        
+        # Speaker Diarization
+        method = self.MTA_setting["Audio"]["SD_model"]
+        speaker_info = get_speaker_info(method, self.task_local_dir, self.audio_path, self.task_logger)
+        self.task_logger.info(f"Diarization result: {speaker_info}")
         
     # Module 2: SRT preprocess: perform preprocess steps
     def preprocess(self):

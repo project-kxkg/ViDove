@@ -10,7 +10,12 @@ video_download:
 # ASR config
 ASR:
   ASR_model: whisper-api # whisper-large-v3, stable-whisper-base, stable-whisper-medium, stable-whisper-large
-  
+
+# Multiagent config
+MTA:
+  Audio:
+    SD_model: Qwen/Qwen2-Audio-7B-Instruct # Qwen2-Audio-7B-Instruct, pyannote(not implemented), titanet-s(not implemented)
+
 # pre-process module config
 pre_process: 
   sentence_form: True

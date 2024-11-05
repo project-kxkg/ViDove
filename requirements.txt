@@ -31,7 +31,7 @@ six==1.16.0
 stable-ts==2.9.0
 sympy==1.11.1
 tiktoken==0.3.1
-torch==2.0.0
+torch==2.0.0 torchvision==0.15.1 torchaudio==2.0.1 --index-url https://download.pytorch.org/whl/cu118
 tqdm==4.65.0
 typing_extensions==4.8.0
 transformers
@@ -43,3 +43,4 @@ gradio
 pyenchant==3.2.2
 cryptography
 yt-dlp
+librosa
