@@ -1,14 +1,11 @@
 import os
 import re
-from pathlib import Path
-from copy import copy, deepcopy
-from csv import reader
+from copy import deepcopy
 from datetime import timedelta
-import logging
-import openai
+
 from tqdm import tqdm
+
 from .. import dict_util
-from openai import OpenAI
 
 # punctuation dictionary for supported languages
 punctuation_dict = {
@@ -267,7 +264,7 @@ class SrtScript(object):
             # handling merge sentences issue.
 
             response = self.client.chat.completions.create(
-                model="gpt-4",
+                model="gpt-4o",
                 messages=[
                     {"role": "system",
                      "content": "Your task is to merge or split sentences into a specified number of lines as required. You need to ensure the meaning of the sentences as much as possible, but when necessary, a sentence can be divided into two lines for output"},

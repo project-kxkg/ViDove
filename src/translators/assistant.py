@@ -1,19 +1,19 @@
 import time
 
-from openai import OpenAI
+from openai import AzureOpenAI
 
 from .abs_api_model import AbsApiModel
 
 SUPPORT_DOMAIN = ["SC2"]
-ID_MAP = {"SC2": "asst_v1cEwYXexhfmkPEYtISyIjYI"} # should move to secrete place in the future
+ID_MAP = {"SC2": "asst_48Ha6WDx8Kybf2pa5nxDvKe1"} # should move to secrete place in the future
 
 class Assistant(AbsApiModel):   
-    def __init__(self, client:OpenAI, system_prompt, temp = 0.15, domain = "SC2"):
+    def __init__(self, client:AzureOpenAI, system_prompt, temp = 0.15, domain = "SC2"):
         super().__init__()
         self.client = client
         self.thread_id = self.client.beta.threads.create(tool_resources={
             "file_search": {
-                "vector_store_ids": ["vs_gtVvYnbEWLmmGNlANVmb4Lz3"]
+                "vector_store_ids": ["vs_MMig3veTRYvKAvGkuhjzRfuv"]
             }
         }).id
         if domain not in SUPPORT_DOMAIN:

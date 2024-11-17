@@ -1,12 +1,12 @@
-from openai import OpenAI
+from openai import AzureOpenAI
 from logging import Logger
 from .abs_api_model import AbsApiModel
 
 class MTA(AbsApiModel):
-    def __init__(self, client:OpenAI, model_name:str, domain:str, source_language:str, target_language:str, target_country:str, logger:Logger, max_iterations:int=5) -> None:
+    def __init__(self, client:AzureOpenAI, model_name:str, domain:str, source_language:str, target_language:str, target_country:str, logger:Logger, max_iterations:int=5) -> None:
         super().__init__()
         self.client = client
-        if model_name in ["gpt-3.5-turbo", "gpt-4", "gpt-4o"]:
+        if model_name in ["gpt-4o-mini", "gpt-4o"]:
             self.model_name = model_name
         else:
             raise NotImplementedError

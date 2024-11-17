@@ -1,15 +1,14 @@
 import logging
 import traceback
 from time import sleep
-from openai import OpenAI
 
 from tqdm import tqdm
 
 from src.srt_util.srt import split_script
 
 from .assistant import Assistant
-from .LLM import LLM
 from .basic_rag import BasicRAG
+from .LLM import LLM
 from .MTA import MTA
 
 SUPPORT_LANG_MAP = {
@@ -24,8 +23,11 @@ SUPPORT_LANG_MAP = {
     "KR": "Korean",
 }
 
+
 class Translator:
-    def __init__(self, model_name, src_lang, tgt_lang, domain, task_id, client, chunk_size = 1000):
+    def __init__(
+        self, model_name, src_lang, tgt_lang, domain, task_id, client, chunk_size=1000
+    ):
         self.task_logger = logging.getLogger(f"task_{task_id}")
         self.task_logger.info("initializing translator")
         self.model_name = model_name
@@ -39,13 +41,31 @@ class Translator:
         self.srt = None
 
         if self.model_name == "Assistant":
-            self.translator = Assistant(self.client, system_prompt = self.system_prompt, domain = domain)
-        elif self.model_name in ["gpt-3.5-turbo", "gpt-4", "gpt-4o"]:
-            self.translator = LLM(self.client, self.model_name, system_prompt = self.system_prompt)
+            self.translator = Assistant(
+                self.client, system_prompt=self.system_prompt, domain=domain
+            )
+        elif self.model_name in ["gpt-4o-mini", "gpt-4o"]:
+            self.translator = LLM(
+                self.client, self.model_name, system_prompt=self.system_prompt
+            )
         elif self.model_name == "Multiagent":
-            self.translator = MTA(self.client, "gpt-4o", self.domain, self.src_lang, self.tgt_lang, SUPPORT_LANG_MAP[self.tgt_lang],self.task_logger)
+            self.translator = MTA(
+                self.client,
+                "gpt-4o",
+                self.domain,
+                self.src_lang,
+                self.tgt_lang,
+                SUPPORT_LANG_MAP[self.tgt_lang],
+                self.task_logger,
+            )
         elif self.model_name == "RAG":
-            self.translator = BasicRAG(self.src_lang, self.tgt_lang, self.task_logger, self.domain, self.model_name)
+            self.translator = BasicRAG(
+                self.src_lang,
+                self.tgt_lang,
+                self.task_logger,
+                self.domain,
+                self.model_name,
+            )
         else:
             print(f"Unsupported model name: {self.model_name}")
             raise NotImplementedError
@@ -54,7 +74,9 @@ class Translator:
 
     def set_srt(self, srt):
         self.srt = srt
-        self.script_arr, self.range_arr = split_script(srt.get_source_only(), self.chunk_size)
+        self.script_arr, self.range_arr = split_script(
+            srt.get_source_only(), self.chunk_size
+        )
         self.task_logger.info("SRT file set")
 
     def prompt_selector(self):
@@ -65,7 +87,9 @@ class Translator:
         except:
             print("Unsupported language, is your abbreviation correct?")
             print(f"supported language map: {SUPPORT_LANG_MAP}")
-            self.task_logger.info(f"Unsupported language detected: {src_lang} to {tgt_lang}")
+            self.task_logger.info(
+                f"Unsupported language detected: {src_lang} to {tgt_lang}"
+            )
 
         prompt = f"""
             you are a translation assistant, your job is to translate a video in domain of {self.domain} from {src_lang} to {tgt_lang},
@@ -105,13 +129,15 @@ class Translator:
                 except Exception as e:
                     print("An error has occurred during translation:", e)
                     print(traceback.format_exc())
-                    self.task_logger.debug("An error has occurred during translation:", e)
-                    self.task_logger.info("Retrying... the script will continue after 30 seconds.")
+                    self.task_logger.debug(
+                        "An error has occurred during translation:", e
+                    )
+                    self.task_logger.info(
+                        "Retrying... the script will continue after 30 seconds."
+                    )
                     sleep(30)
                     flag = True
 
             self.task_logger.info(f"source text: {sentence}")
             self.task_logger.info(f"translate text: {translation}")
             self.srt.set_translation(translation, range_, self.model_name, self.task_id)
-
-        

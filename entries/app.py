@@ -32,21 +32,24 @@ def init(apikey, opt_resolution, opt_post, opt_pre, output_type, src_lang, tgt_l
             try:
                 fernet = Fernet(VIDOVE_DECODE_KEY.encode())
                 apikey = fernet.decrypt(apikey.encode()).decode()
-            except:
+            except:  # noqa: E722
                 raise gr.Error("Invalid API key")
-            task_cfg["OPENAI_API_KEY"] = apikey
+            task_cfg["AZURE_OPENAI_API_KEY"] = apikey 
         else:
-            task_cfg["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
-            translation_model = "gpt-3.5-turbo"
+            task_cfg["AZURE_OPENAI_API_KEY"] = os.getenv("AZURE_OPENAI_API_KEY")
+            translation_model = "gpt-4o-mini"
             resolution = 480
-            gr.Warning("Free Mode: API key is not provided, you can only use gpt-3.5-turbo model for translation. And the video resolution is set to <=480p.")
+            gr.Warning("Free Mode: API key is not provided, you can only use gpt-4o-mini model for translation. And the video resolution is set to <=480p.")
     elif LAUNCH_MODE == "local":
         if apikey != "":
-            task_cfg["OPENAI_API_KEY"] = apikey
+            task_cfg["AZURE_OPENAI_API_KEY"] = apikey
         else:
-            task_cfg["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
+            task_cfg["AZURE_OPENAI_API_KEY"] = os.getenv("AZURE_OPENAI_API_KEY")
+            print(os.getenv("AZURE_OPENAI_API_KEY"))
     else:
         raise gr.Error("Invalid Launch Mode")
+    
+    print(f"API Key: {task_cfg['AZURE_OPENAI_API_KEY']}")
 
     task_cfg["video_download"]["resolution"] = resolution
     task_cfg["source_lang"] = src_lang
@@ -152,7 +155,7 @@ with gr.Blocks() as demo:
     gr.Markdown("- 2024-04-05: ViDove V0.1.1 is released! Now we support SC2 domain expert translation model.")
 
     gr.Markdown("### Purchase")
-    gr.Markdown("Note that you can use our demo without purchasing an API key, but you can only use the **gpt-3.5-turbo** model for translation. If you want to use other models, please purchase an API key.")
+    gr.Markdown("Note that you can use our demo without purchasing an API key, but you can only use the **gpt-4o-mini** model for translation. If you want to use other models, please purchase an API key.")
     gr.Markdown("[Purchase API Key Here](https://afdian.com/a/gggzmz)")
     
     gr.Markdown("### Input")
@@ -190,7 +193,7 @@ with gr.Blocks() as demo:
         opt_post = gr.CheckboxGroup(["Split Sentence", "Remove Punc"], label="Post-process Module", info="Post-process module settings", value=["Split Sentence", "Remove Punc"])
     with gr.Tab("Translation"):
         gr.Markdown("## Translation Settings:")
-        translation_model = gr.Dropdown(choices=["gpt-3.5-turbo", "gpt-4", "gpt-4o", "SC2 Domain Expert(beta test)"], label="Select Translation Model", value="gpt-4o")
+        translation_model = gr.Dropdown(choices=["gpt-4o-mini", "gpt-4o", "SC2 Domain Expert(beta test)"], label="Select Translation Model", value="gpt-4o")
         default_chunksize = 2000 if opt_src.value == "EN" else 100
         chunk_size = gr.Number(value=default_chunksize, info="100 for ZH as source language")
     

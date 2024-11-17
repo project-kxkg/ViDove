@@ -1,38 +1,37 @@
+import logging
+import shutil
+import subprocess
 import threading
-import time
-
-import openai
+from datetime import datetime
+from enum import Enum
+from os import getenv
+from pathlib import Path
+from time import gmtime, strftime, time
 
 # pytube deprecated
 # from pytube import YouTube
-
 import yt_dlp
-from os import getenv, getcwd
-from pathlib import Path
-from enum import Enum, auto
-import logging
-import subprocess
+from openai import AzureOpenAI
+
+from src.ASR.ASR import get_transcript
 from src.srt_util.srt import SrtScript
 from src.srt_util.srt2ass import srt2ass
-from time import time, strftime, gmtime, sleep
 from src.translators.translator import Translator
-from src.ASR.ASR import get_transcript
-from openai import OpenAI
 
-import shutil
-from datetime import datetime
 
 class TaskStatus(str, Enum):
     """
     An enumeration class representing the different statuses a task can have in the translation pipeline.
     TODO: add translation progress indicator (%).
     """
-    CREATED = 'CREATED'
-    INITIALIZING_ASR = 'INITIALIZING_ASR'
-    PRE_PROCESSING = 'PRE_PROCESSING'
-    TRANSLATING = 'TRANSLATING'
-    POST_PROCESSING = 'POST_PROCESSING'
-    OUTPUT_MODULE = 'OUTPUT_MODULE'
+
+    CREATED = "CREATED"
+    INITIALIZING_ASR = "INITIALIZING_ASR"
+    PRE_PROCESSING = "PRE_PROCESSING"
+    TRANSLATING = "TRANSLATING"
+    POST_PROCESSING = "POST_PROCESSING"
+    OUTPUT_MODULE = "OUTPUT_MODULE"
+
 
 class Task:
     """
@@ -63,12 +62,12 @@ class Task:
         self.gpu_status = 0
 
         self.task_id = task_id
-        
+
         self.task_local_dir = task_local_dir
         self.ASR_setting = task_cfg["ASR"]
         self.translation_setting = task_cfg["translation"]
         self.translation_model = self.translation_setting["model"]
-        
+
         self.output_type = task_cfg["output_type"]
         self.target_lang = task_cfg["target_lang"]
         self.source_lang = task_cfg["source_lang"]
@@ -76,7 +75,7 @@ class Task:
         self.pre_setting = task_cfg["pre_process"]
         self.post_setting = task_cfg["post_process"]
         self.chunk_size = task_cfg["translation"]["chunk_size"]
-        
+
         self.audio_path = None
         self.SRT_Script = None
         self.result = None
@@ -88,24 +87,28 @@ class Task:
         self.task_logger = logging.getLogger(f"task_{task_id}")
         logfmt = "%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s"
         self.task_logger.setLevel(logging.INFO)
-        self.log_dir = "{}/{}_{}.log".format(task_local_dir, f"task_{task_id}", datetime.now().strftime("%m%d%Y_%H%M%S"))
-        task_file_handler = logging.FileHandler(self.log_dir, 'w', encoding='utf-8')
-        task_file_handler.setFormatter(logging.Formatter(logfmt)) 
+        self.log_dir = "{}/{}_{}.log".format(
+            task_local_dir, f"task_{task_id}", datetime.now().strftime("%m%d%Y_%H%M%S")
+        )
+        task_file_handler = logging.FileHandler(self.log_dir, "w", encoding="utf-8")
+        task_file_handler.setFormatter(logging.Formatter(logfmt))
         self.task_logger.addHandler(task_file_handler)
         # logging.basicConfig(level=logging.INFO, format=logfmt, handlers=[
         #     logging.FileHandler(
         #         "{}/{}_{}.log".format(task_local_dir, f"task_{task_id}", datetime.now().strftime("%m%d%Y_%H%M%S")),
         #         'w', encoding='utf-8')])
-        
+
         print(f"Task ID: {self.task_id}")
         self.task_logger.info(f"Task ID: {self.task_id}")
-        if "OPENAI_API_KEY" in task_cfg:
-            self.task_logger.info("Using OPENAI_API_KEY from gradio interface.")
-            self.api_key = task_cfg["OPENAI_API_KEY"]
+        if "AZURE_OPENAI_API_KEY" in task_cfg:
+            self.task_logger.info("Using AZURE_OPENAI_API_KEY from gradio interface.")
+            self.api_key = task_cfg["AZURE_OPENAI_API_KEY"]
         else:
-            self.task_logger.info("Using OPENAI_API_KEY from environment variable.")
-            self.api_key = getenv("OPENAI_API_KEY")
-        self.task_logger.info(f"{self.source_lang} -> {self.target_lang} task in {self.field}")
+            self.task_logger.info("Using AZURE_OPENAI_API_KEY from environment variable.")
+            self.api_key = getenv("AZURE_OPENAI_API_KEY")
+        self.task_logger.info(
+            f"{self.source_lang} -> {self.target_lang} task in {self.field}"
+        )
         self.task_logger.info(f"Translation Model: {self.translation_model}")
         self.task_logger.info(f"Chunk Size: {self.chunk_size}")
         self.task_logger.info(f"ASR Model: {self.ASR_setting['ASR_model']}")
@@ -118,17 +121,19 @@ class Task:
         self.task_logger.info("Post-process setting:")
         for key in self.post_setting:
             self.task_logger.info(f"{key}: {self.post_setting[key]}")
-        
+
         # init openai client
-        self.client = OpenAI(api_key = self.api_key)
+        self.client = AzureOpenAI(api_key=self.api_key, azure_endpoint=getenv("AZURE_OPENAI_ENDPOINT"),api_version="2024-05-01-preview")
         # initialize translator
-        self.translator = Translator(self.translation_model, 
-                                     self.source_lang, 
-                                     self.target_lang, 
-                                     self.field, 
-                                     self.task_id,
-                                     self.client,
-                                     self.chunk_size)
+        self.translator = Translator(
+            self.translation_model,
+            self.source_lang,
+            self.target_lang,
+            self.field,
+            self.task_id,
+            self.client,
+            self.chunk_size,
+        )
 
     @staticmethod
     def fromYoutubeLink(youtube_url, task_id, task_dir, task_cfg):
@@ -143,23 +148,23 @@ class Task:
         Creates an AudioTask instance from an audio file path.
         """
         return AudioTask(task_id, task_dir, task_cfg, audio_path)
-    
+
     @staticmethod
     def fromVideoFile(video_path, task_id, task_dir, task_cfg):
         """
         Creates a VideoTask instance from a video file path.
         """
         return VideoTask(task_id, task_dir, task_cfg, video_path)
-    
+
     @staticmethod
     def fromSRTFile(srt_path, task_id, task_dir, task_cfg):
         """
         Creates a SRTTask instance from a srt file path.
         """
         return SRTTask(task_id, task_dir, task_cfg, srt_path)
-    
+
     # Module 1 ASR: audio --> SRT_script
-    def get_srt_class(self, pre_load_asr_model = None):
+    def get_srt_class(self, pre_load_asr_model=None):
         """
         Handles the ASR module to convert audio to SRT script format.
         """
@@ -173,60 +178,74 @@ class Task:
         # shoud be modified after we incorporate more ASR methods
         method = self.ASR_setting["ASR_model"]
         # whisper_model = self.ASR_setting["whisper_config"]["whisper_model"]
-        src_srt_path = self.task_local_dir.joinpath(f"task_{self.task_id}_{self.source_lang}.srt")
+        src_srt_path = self.task_local_dir.joinpath(
+            f"task_{self.task_id}_{self.source_lang}.srt"
+        )
 
         # get transcript
-        transcript = get_transcript(method, 
-                                    src_srt_path, 
-                                    self.source_lang, 
-                                    self.audio_path, 
-                                    self.client, 
-                                    self.task_logger,
-                                    pre_load_asr_model)
+        transcript = get_transcript(
+            method,
+            src_srt_path,
+            self.source_lang,
+            self.audio_path,
+            self.client,
+            self.task_logger,
+            pre_load_asr_model,
+        )
 
         if transcript != None:  # if the audio is transfered
             if isinstance(transcript, str):
-                self.SRT_Script = SrtScript.parse_from_srt_file(self.source_lang, 
-                                                                self.target_lang, 
-                                                                self.task_logger, 
-                                                                self.client, 
-                                                                domain = self.field, 
-                                                                srt_str = transcript.rstrip())
+                self.SRT_Script = SrtScript.parse_from_srt_file(
+                    self.source_lang,
+                    self.target_lang,
+                    self.task_logger,
+                    self.client,
+                    domain=self.field,
+                    srt_str=transcript.rstrip(),
+                )
             else:
-                self.SRT_Script = SrtScript(self.source_lang, 
-                                            self.target_lang, 
-                                            transcript, 
-                                            self.task_logger,
-                                            self.client, 
-                                            self.field)
+                self.SRT_Script = SrtScript(
+                    self.source_lang,
+                    self.target_lang,
+                    transcript,
+                    self.task_logger,
+                    self.client,
+                    self.field,
+                )
             # save the srt script to local
             self.SRT_Script.write_srt_file_src(src_srt_path)
         else:
-            raise RuntimeError(f"Failed to get transcript from audio file: {self.audio_path}")
-        
+            raise RuntimeError(
+                f"Failed to get transcript from audio file: {self.audio_path}"
+            )
+
     # Module 2: SRT preprocess: perform preprocess steps
     def preprocess(self):
         """
         Performs preprocessing steps on the SRT script.
         """
         self.status = TaskStatus.PRE_PROCESSING
-        self.task_logger.info("--------------------Start Preprocessing SRT class--------------------")
+        self.task_logger.info(
+            "--------------------Start Preprocessing SRT class--------------------"
+        )
         if self.pre_setting["sentence_form"]:
             self.SRT_Script.form_whole_sentence()
         if self.pre_setting["spell_check"]:
             self.SRT_Script.spell_check_term()
         if self.pre_setting["term_correct"]:
             self.SRT_Script.correct_with_force_term()
-        processed_srt_path_src = str(Path(self.task_local_dir) / f'{self.task_id}_processed.srt')
+        processed_srt_path_src = str(
+            Path(self.task_local_dir) / f"{self.task_id}_processed.srt"
+        )
         self.SRT_Script.write_srt_file_src(processed_srt_path_src)
 
         if self.output_type["subtitle"] == "ass":
             self.task_logger.info("write English .srt file to .ass")
             assSub_src = srt2ass(processed_srt_path_src, "default", "No", "Modest")
-            self.task_logger.info('ASS subtitle saved as: ' + assSub_src)
+            self.task_logger.info("ASS subtitle saved as: " + assSub_src)
         self.script_input = self.SRT_Script.get_source_only()
         pass
-    
+
     def update_translation_progress(self, new_progress):
         """
         (UNUSED)
@@ -240,10 +259,12 @@ class Task:
         """
         Handles the translation of the SRT script.
         """
-        self.task_logger.info("---------------------Start Translation--------------------")
+        self.task_logger.info(
+            "---------------------Start Translation--------------------"
+        )
         self.translator.set_srt(self.SRT_Script)
         self.translator.translate()
-    
+
     # Module 4: perform srt post process steps
     def postprocess(self):
         """
@@ -251,12 +272,16 @@ class Task:
         """
         self.status = TaskStatus.POST_PROCESSING
 
-        self.task_logger.info("---------------------Start Post-processing SRT class---------------------")
+        self.task_logger.info(
+            "---------------------Start Post-processing SRT class---------------------"
+        )
         if self.post_setting["check_len_and_split"]:
             self.SRT_Script.check_len_and_split()
         if self.post_setting["remove_trans_punctuation"]:
             self.SRT_Script.remove_trans_punctuation()
-        self.task_logger.info("---------------------Post-processing SRT class finished---------------------")
+        self.task_logger.info(
+            "---------------------Post-processing SRT class finished---------------------"
+        )
 
     # Module 5: output module
     def output_render(self):
@@ -268,7 +293,7 @@ class Task:
         subtitle_type = self.output_type["subtitle"]
         is_bilingual = self.output_type["bilingual"]
 
-        results_dir =f"{self.task_local_dir}/results"
+        results_dir = f"{self.task_local_dir}/results"
 
         subtitle_path = f"{results_dir}/{self.task_id}_{self.target_lang}.srt"
         self.SRT_Script.write_srt_file_translate(subtitle_path)
@@ -279,27 +304,37 @@ class Task:
         if subtitle_type == "ass":
             self.task_logger.info("write .srt file to .ass")
             subtitle_path = srt2ass(subtitle_path, "default", "No", "Modest")
-            self.task_logger.info('ASS subtitle saved as: ' + subtitle_path)
+            self.task_logger.info("ASS subtitle saved as: " + subtitle_path)
 
         final_res = subtitle_path
 
         # encode to .mp4 video file
         if video_out and self.video_path is not None:
             self.task_logger.info("encoding video file")
-            self.task_logger.info(f'ffmpeg comand: \nffmpeg -i {self.video_path} -vf "subtitles={subtitle_path}" {results_dir}/{self.task_id}.mp4')
+            self.task_logger.info(
+                f'ffmpeg comand: \nffmpeg -i {self.video_path} -vf "subtitles={subtitle_path}" {results_dir}/{self.task_id}.mp4'
+            )
             subprocess.run(
-                ["ffmpeg",
-                    "-i", self.video_path,
-                    "-vf", f"subtitles={subtitle_path}",
-                    f"{results_dir}/{self.task_id}.mp4"])
+                [
+                    "ffmpeg",
+                    "-i",
+                    self.video_path,
+                    "-vf",
+                    f"subtitles={subtitle_path}",
+                    f"{results_dir}/{self.task_id}.mp4",
+                ]
+            )
             final_res = f"{results_dir}/{self.task_id}.mp4"
 
         self.t_e = time()
         self.task_logger.info(
-            "Pipeline finished, time duration:{}".format(strftime("%H:%M:%S", gmtime(self.t_e - self.t_s))))
+            "Pipeline finished, time duration:{}".format(
+                strftime("%H:%M:%S", gmtime(self.t_e - self.t_s))
+            )
+        )
         return final_res
-    
-    def run_pipeline(self, pre_load_asr_model = None):
+
+    def run_pipeline(self, pre_load_asr_model=None):
         """
         Executes the entire pipeline process for the task.
         """
@@ -308,8 +343,9 @@ class Task:
         self.translation()
         self.postprocess()
         self.result = self.output_render()
-        
+
         # print(self.result)
+
 
 class YoutubeTask(Task):
     def __init__(self, task_id, task_local_dir, task_cfg, youtube_url):
@@ -319,8 +355,7 @@ class YoutubeTask(Task):
         self.video_resolution = task_cfg["video_download"]["resolution"]
         # self.model = model
 
-    def run(self, pre_load_asr_model = None):
-
+    def run(self, pre_load_asr_model=None):
         self.task_logger.info(f"Youtube URL: {self.youtube_url}")
         self.task_logger.info(f"Video Resolution: {self.video_resolution}")
         video_download_path = f"{self.task_local_dir}/task_{self.task_id}.mp4"
@@ -332,15 +367,15 @@ class YoutubeTask(Task):
             video_format = f"bestvideo[height={self.video_resolution}][ext=mp4]+bestaudio[ext=mp3]/worstvideo[ext=mp4]+bestaudio[ext=mp3]/worst[ext=mp4]"
         else:
             raise RuntimeError(f"Unsupported video resolution: {self.video_resolution}")
-        
+
         video_opts = {
-            'format': video_format, 
-            'outtmpl': video_download_path,
+            "format": video_format,
+            "outtmpl": video_download_path,
         }
 
         audio_opts = {
-            'format': 'bestaudio[ext=mp3]/bestaudio', 
-            'outtmpl': audio_download_dir,
+            "format": "bestaudio[ext=mp3]/bestaudio",
+            "outtmpl": audio_download_dir,
         }
 
         with yt_dlp.YoutubeDL(video_opts) as ydl:
@@ -350,7 +385,7 @@ class YoutubeTask(Task):
                 self.task_logger.error(e)
                 raise RuntimeError(f"Failed to download video {self.youtube_url}")
             ydl.close()
-        
+
         with yt_dlp.YoutubeDL(audio_opts) as ydl:
             try:
                 ydl.download([self.youtube_url])
@@ -358,7 +393,7 @@ class YoutubeTask(Task):
                 self.task_logger.error(e)
                 raise RuntimeError(f"Failed to download audio {self.youtube_url}")
             ydl.close()
-        
+
         self.video_path = self.task_local_dir.joinpath(f"task_{self.task_id}.mp4")
         self.audio_path = self.task_local_dir.joinpath(f"task_{self.task_id}.mp3")
 
@@ -368,6 +403,7 @@ class YoutubeTask(Task):
 
         super().run_pipeline(pre_load_asr_model)
 
+
 class AudioTask(Task):
     def __init__(self, task_id, task_local_dir, task_cfg, audio_path):
         super().__init__(task_id, task_local_dir, task_cfg)
@@ -376,11 +412,12 @@ class AudioTask(Task):
         self.audio_path = audio_path
         self.video_path = None
 
-    def run(self, pre_load_asr_model = None):
+    def run(self, pre_load_asr_model=None):
         self.task_logger.info(f"Video File Dir: {self.video_path}")
         self.task_logger.info(f"Audio File Dir: {self.audio_path}")
         self.task_logger.info("Data Prep Complete. Start pipeline")
         super().run_pipeline(pre_load_asr_model)
+
 
 class VideoTask(Task):
     def __init__(self, task_id, task_local_dir, task_cfg, video_path):
@@ -392,11 +429,21 @@ class VideoTask(Task):
         shutil.copyfile(video_path, new_video_path)
         self.video_path = new_video_path
 
-    def run(self, pre_load_asr_model = None):
+    def run(self, pre_load_asr_model=None):
         self.task_logger.info("using ffmpeg to extract audio")
         subprocess.run(
-                ['ffmpeg', '-i', self.video_path, '-f', 'mp3',
-                 '-ab', '192000', '-vn', self.task_local_dir.joinpath(f"task_{self.task_id}.mp3")])
+            [
+                "ffmpeg",
+                "-i",
+                self.video_path,
+                "-f",
+                "mp3",
+                "-ab",
+                "192000",
+                "-vn",
+                self.task_local_dir.joinpath(f"task_{self.task_id}.mp3"),
+            ]
+        )
         self.task_logger.info("audio extraction finished")
 
         self.audio_path = self.task_local_dir.joinpath(f"task_{self.task_id}.mp3")
@@ -404,6 +451,7 @@ class VideoTask(Task):
         self.task_logger.info(f" Audio File Dir: {self.audio_path}")
         self.task_logger.info("Data Prep Complete. Start pipeline")
         super().run_pipeline(pre_load_asr_model)
+
 
 class SRTTask(Task):
     def __init__(self, task_id, task_local_dir, task_cfg, srt_path):
@@ -414,12 +462,14 @@ class SRTTask(Task):
         new_srt_path = f"{task_local_dir}/task_{self.task_id}_{self.source_lang}.srt"
         self.task_logger.info(f"Copy video file to: {new_srt_path}")
         shutil.copyfile(srt_path, new_srt_path)
-        self.SRT_Script = SrtScript.parse_from_srt_file(self.source_lang, 
-                                                        self.target_lang, 
-                                                        self.task_logger, 
-                                                        self.client, 
-                                                        domain = self.field, 
-                                                        path = srt_path)
+        self.SRT_Script = SrtScript.parse_from_srt_file(
+            self.source_lang,
+            self.target_lang,
+            self.task_logger,
+            self.client,
+            domain=self.field,
+            path=srt_path,
+        )
 
     def run(self):
         self.task_logger.info(f"Video File Dir: {self.video_path}")

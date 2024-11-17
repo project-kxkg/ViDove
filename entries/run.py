@@ -1,14 +1,11 @@
-import __init_lib_path
-import logging
-from yaml import Loader, Dumper, load, dump
-from src.task import Task
-import openai
 import argparse
-import os
-from pathlib import Path
-from datetime import datetime
 import shutil
+from pathlib import Path
 from uuid import uuid4
+
+from yaml import Loader, load
+
+from src.task import Task
 
 """
     Main entry for terminal environment.
@@ -17,19 +14,59 @@ from uuid import uuid4
               [--launch_cfg LAUNCH_CFG] [--task_cfg TASK_CFG]
 """
 
+
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--link", help="youtube video link here", default=None, type=str, required=False)
-    parser.add_argument("--video_file", help="local video path here", default=None, type=str, required=False)
-    parser.add_argument("--audio_file", help="local audio path here", default=None, type=str, required=False)
-    parser.add_argument("--srt_file", help="srt file input path here", default=None, type=str, required=False) # Deprecated
+    parser.add_argument(
+        "--link", help="youtube video link here", default=None, type=str, required=False
+    )
+    parser.add_argument(
+        "--video_file",
+        help="local video path here",
+        default=None,
+        type=str,
+        required=False,
+    )
+    parser.add_argument(
+        "--audio_file",
+        help="local audio path here",
+        default=None,
+        type=str,
+        required=False,
+    )
+    parser.add_argument(
+        "--srt_file",
+        help="srt file input path here",
+        default=None,
+        type=str,
+        required=False,
+    )  # Deprecated
     # parser.add_argument("--continue", help="task_id that need to continue", default=None, type=str, required=False) # need implement
-    parser.add_argument("--launch_cfg", help="launch config path", default='./configs/local_launch.yaml', type=str, required=False)
-    parser.add_argument("--is_assistant", help="is assistant mode", default=False, type=bool, required=False)
-    parser.add_argument("--task_cfg", help="task config path", default='./configs/task_config.yaml', type=str, required=False)
+    parser.add_argument(
+        "--launch_cfg",
+        help="launch config path",
+        default="./configs/local_launch.yaml",
+        type=str,
+        required=False,
+    )
+    parser.add_argument(
+        "--is_assistant",
+        help="is assistant mode",
+        default=False,
+        type=bool,
+        required=False,
+    )
+    parser.add_argument(
+        "--task_cfg",
+        help="task config path",
+        default="./configs/task_config.yaml",
+        type=str,
+        required=False,
+    )
     args = parser.parse_args()
 
     return args
+
 
 if __name__ == "__main__":
     # read args and configs
@@ -38,7 +75,7 @@ if __name__ == "__main__":
     task_cfg = load(open(args.task_cfg), Loader=Loader)
 
     # initialize dir
-    local_dir = Path(launch_cfg['local_dump'])
+    local_dir = Path(launch_cfg["local_dump"])
     if not local_dir.exists():
         local_dir.mkdir(parents=False, exist_ok=False)
 
