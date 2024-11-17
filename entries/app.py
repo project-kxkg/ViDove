@@ -153,9 +153,11 @@ with gr.Blocks() as demo:
 
     gr.Markdown("### Update Log")
     gr.Markdown("- 2024-04-05: ViDove V0.1.1 is released! Now we support SC2 domain expert translation model.")
+    gr.Markdown("- 2024-04-05: ViDove V0.1.1 已发布! 现在可以使用针对星际2领域的翻译模型.")
 
     gr.Markdown("### Purchase")
-    gr.Markdown("Note that you can use our demo without purchasing an API key, but you can only use the **gpt-4o-mini** model for translation. If you want to use other models, please purchase an API key.")
+    gr.Markdown("Note that you can use our demo without purchasing an API key, but you can only use the **gpt-3.5-turbo** model for translation. If you want to use other models, please purchase an API key.")
+    gr.Markdown("**注意** ：你可以不填写API key即可使用我们的demo,但是你只能使用 **gpt-3.5-turbo** 模型.如果你需要使用更多模型,除了自己本地部署外,可以点击下方链接购买专用API key.")
     gr.Markdown("[Purchase API Key Here](https://afdian.com/a/gggzmz)")
     
     gr.Markdown("### Input")
