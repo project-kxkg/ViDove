@@ -19,13 +19,16 @@ def get_transcript(method, src_srt_path, source_lang, audio_path, client, task_l
         # process the audio by method
         if method == "whisper-api": 
             transcript = get_transcript_whisper_api(audio_path, source_lang, init_prompt, client)
+            print(transcript)
             is_trans = True
         elif method == "whisper-large-v3":
             transcript = get_transcript_whisper_large_v3(audio_path, pre_load_asr_model)
+            print(transcript)
             is_trans = True
         elif "stable" in method:
             whisper_model = method.split("-")[2]
             transcript = get_transcript_stable(audio_path, whisper_model, init_prompt, pre_load_asr_model)
+            print(transcript)
             is_trans = True
         else:
             raise RuntimeError(f"unavaliable ASR inference method: {method}")   
