@@ -29,8 +29,8 @@ def get_transcript(method, src_srt_path, source_lang, audio_path, client, task_l
             transcript = get_transcript_whisper_large_v3(audio_path, pre_load_asr_model)
             is_trans = True
         elif method == "whisper_clips":
-            #.........
-        
+            transcript = get_transcript_whisper_clips(audio_path,source_lang,client)
+            is_trans = True
         elif "stable" in method:
             whisper_model = method.split("-")[2]
             transcript = get_transcript_stable(audio_path, whisper_model, init_prompt, pre_load_asr_model)
@@ -69,6 +69,106 @@ def get_transcript_stable(audio_path, whisper_model, init_prompt, pre_load_asr_m
     torch.cuda.empty_cache()
 
     return transcript
+    
+def get_transcript_whisper_clips(audio_path,source_lang,client):
+    
+    file_path = "/content/categories_places365.txt"
+
+    category_list = []
+    
+    with open(file_path, "r") as file:
+        for line in file:
+            category_path = line.strip().split(" ")[0][3:]
+            categories = category_path.split("/")
+            category_list=category_list+categories
+
+    modified_category_list_2=[]
+    for words in category_list:
+        categories=words.replace("_"," ")
+        modified_category_list_2.append(categories)
+
+    category_database= list(set(modified_category_list_2))
+    print(category_database)
+    
+    # Load the CLIP model
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    model, preprocess = clip.load("ViT-B/32", device=device)
+
+    # Define a list of possible keywords (vocabulary) to identify in the video
+    object_vocab = category_database
+
+    # Step 1: Extract frames from the video at regular intervals
+    def extract_frames(video_path, interval=1):
+        video = cv2.VideoCapture(video_path)
+        frames = []
+        fps = video.get(cv2.CAP_PROP_FPS)
+        frame_interval = int(fps * interval)
+        success, frame = video.read()
+        frame_count = 0
+
+        while success:
+            if frame_count % frame_interval == 0:
+                frames.append(frame)
+            success, frame = video.read()
+            frame_count += 1
+
+        video.release()
+        return frames
+
+    # Step 2: Use CLIP to analyze each frame and extract the most relevant keyword
+    def analyze_frame_with_clip(frame, vocabulary):
+        detected_keywords = []
+        # Convert frame to RGB and preprocess for CLIP
+        image = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+        image_input = preprocess(image).unsqueeze(0).to(device)
+        text_inputs = clip.tokenize(vocabulary).to(device)
+
+        # Calculate similarity between image and each keyword in the vocabulary
+        with torch.no_grad():
+            image_features = model.encode_image(image_input)
+            text_features = model.encode_text(text_inputs)
+            similarity = (image_features @ text_features.T).squeeze()
+
+        # Select the keyword with the highest similarity score
+        top_keyword_idx = similarity.argmax().item()
+        detected_keyword = vocabulary[top_keyword_idx]
+        return detected_keyword
+
+    # Main function: Process video frames, extract keywords, and generate a summary prompt
+    def get_video_keywords(video_path, interval=1):
+        frames = extract_frames(video_path, interval)
+        all_keywords = []
+
+        for i, frame in enumerate(frames):
+            print(f"Processing frame {i+1}/{len(frames)}")
+            keyword = analyze_frame_with_clip(frame, object_vocab)
+            all_keywords.append(keyword)
+            print(f"Frame {i} keyword: {keyword}")
+
+        # Count each keyword's frequency and sort by frequency
+        keyword_counts = Counter(all_keywords)
+        sorted_keywords = keyword_counts.most_common()
+
+        # Extract only the top keywords for the final prompt
+        top_keywords = [keyword for keyword, count in sorted_keywords]
+
+        # Generate the final prompt with the video’s main keywords
+        prompt = f"The key concepts in this video include: {', '.join(top_keywords[:3])}."
+        print(prompt)
+        return prompt
+
+    # Path to the video file
+    video_path = "/content/base.mp4"
+
+    # Run the function and get the prompt
+    video_prompt = get_video_keywords(video_path,60)
+
+    def get_transcript_whisper_plus_clips_api(audio_path, source_lang, init_prompt, client):
+        with open(audio_path, 'rb') as audio_file:
+            transcript = client.audio.transcriptions.create(model="whisper-1", file=audio_file, response_format="srt", language=source_lang.lower(), prompt=init_prompt)
+        return transcript
+
+    return get_transcript_whisper_plus_clips_api(audio_path,source_lang,video_prompt,client)
 
 def get_transcript_whisper_large_v3(audio_path, pre_load_asr_model = None):
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
