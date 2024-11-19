@@ -29,19 +29,7 @@ def get_transcript(method, src_srt_path, source_lang, audio_path, client, task_l
             transcript = get_transcript_whisper_large_v3(audio_path, pre_load_asr_model)
             is_trans = True
         elif method == "whisper_clips":
-            # File path
-            file_path = "/content/categories_places365.txt"
-            category_list = []
-            with open(file_path, "r") as file:
-                for line in file:
-                    category_path = line.strip().split(" ")[0][3:]
-                    categories = category_path.split("/")
-                    category_list=category_list+categories
-            modified_category_list_2=[]
-            for words in category_list:
-                categories=words.replace("_"," ")
-                modified_category_list_2.append(categories)
-                category_database= list(set(modified_category_list_2))
+            #.........
         
         elif "stable" in method:
             whisper_model = method.split("-")[2]
