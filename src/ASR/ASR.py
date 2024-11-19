@@ -162,7 +162,7 @@ def get_transcript_whisper_clips(video_path,audio_path,source_lang,client):
     video_prompt = get_video_keywords(video_path,60)
 
     def get_transcript_whisper_plus_clips_api(audio_path, source_lang, init_prompt, client):
-        print("ccd:audio_path")
+        print("ccd:",audio_path)
         with open(audio_path, 'rb') as audio_file:
             transcript = client.audio.transcriptions.create(model="whisper-1", file=audio_file, response_format="srt", language=source_lang.lower(), prompt=init_prompt)
         return transcript
