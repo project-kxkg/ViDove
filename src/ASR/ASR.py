@@ -22,13 +22,13 @@ def get_transcript(method, src_srt_path, source_lang, audio_path, client, task_l
         init_prompt = "Hello, welcome to my lecture." if source_lang == "EN" else ""
 
         # process the audio by method
-        if method == "whisper-api": 
+        if method == "whisper_clips":
             transcript = get_transcript_whisper_api(audio_path, source_lang, init_prompt, client)
             is_trans = True
         elif method == "whisper-large-v3":
             transcript = get_transcript_whisper_large_v3(audio_path, pre_load_asr_model)
             is_trans = True
-        elif method == "whisper_clips":
+        elif method == "whisper-api":
             transcript = get_transcript_whisper_clips(audio_path,source_lang,client)
             is_trans = True
         elif "stable" in method:
