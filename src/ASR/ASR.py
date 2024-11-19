@@ -11,7 +11,7 @@ import torch
 import stable_whisper
 from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline
 
-def get_transcript(method, src_srt_path, source_lang, video_path ,audio_path, client, task_logger, pre_load_asr_model = None):
+def get_transcript(method, src_srt_path, source_lang, video_path , audio_path, client, task_logger, pre_load_asr_model = None):
 
     is_trans = False # is trans flag 
 
