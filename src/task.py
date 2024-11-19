@@ -178,7 +178,8 @@ class Task:
         # get transcript
         transcript = get_transcript(method, 
                                     src_srt_path, 
-                                    self.source_lang, 
+                                    self.source_lang,
+                                    self.video_path,
                                     self.audio_path, 
                                     self.client, 
                                     self.task_logger,
