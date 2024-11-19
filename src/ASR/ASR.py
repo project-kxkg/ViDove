@@ -72,7 +72,7 @@ def get_transcript_stable(audio_path, whisper_model, init_prompt, pre_load_asr_m
     
 def get_transcript_whisper_clips(audio_path,source_lang,client):
     
-    file_path = "/content/categories_places365.txt"
+    file_path = "src/ASR/categories_places365.txt"
 
     category_list = []
     
