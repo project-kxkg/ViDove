@@ -11,7 +11,7 @@ import torch
 import stable_whisper
 from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline
 
-def get_transcript(method, src_srt_path, source_lang, audio_path, client, task_logger, pre_load_asr_model = None):
+def get_transcript(method, src_srt_path, source_lang, video_path ,audio_path, client, task_logger, pre_load_asr_model = None):
 
     is_trans = False # is trans flag 
 
@@ -29,7 +29,7 @@ def get_transcript(method, src_srt_path, source_lang, audio_path, client, task_l
             transcript = get_transcript_whisper_large_v3(audio_path, pre_load_asr_model)
             is_trans = True
         elif method == "whisper-api":
-            transcript = get_transcript_whisper_clips("/Users/zonghengwu/Desktop",audio_path,source_lang,client)
+            transcript = get_transcript_whisper_clips(video_path,audio_path,source_lang,client)
             is_trans = True
         elif "stable" in method:
             whisper_model = method.split("-")[2]
