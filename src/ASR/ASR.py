@@ -29,7 +29,7 @@ def get_transcript(method, src_srt_path, source_lang, audio_path, client, task_l
             transcript = get_transcript_whisper_large_v3(audio_path, pre_load_asr_model)
             is_trans = True
         elif method == "whisper-api":
-            transcript = get_transcript_whisper_clips(audio_path,source_lang,client)
+            transcript = get_transcript_whisper_clips("/Users/zonghengwu/Desktop",audio_path,source_lang,client)
             is_trans = True
         elif "stable" in method:
             whisper_model = method.split("-")[2]
@@ -70,7 +70,7 @@ def get_transcript_stable(audio_path, whisper_model, init_prompt, pre_load_asr_m
 
     return transcript
     
-def get_transcript_whisper_clips(audio_path,source_lang,client):
+def get_transcript_whisper_clips(video_path,audio_path,source_lang,client):
     
     file_path = "src/ASR/categories_places365.txt"
 
@@ -157,8 +157,6 @@ def get_transcript_whisper_clips(audio_path,source_lang,client):
         print(prompt)
         return prompt
 
-    # Path to the video file
-    video_path = "/content/base.mp4"
 
     # Run the function and get the prompt
     video_prompt = get_video_keywords(video_path,60)
