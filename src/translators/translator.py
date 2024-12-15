@@ -99,10 +99,10 @@ class Translator:
         self.task_logger.info(f"System Prompt: {prompt}")
         return prompt
 
-    def translate(self):
+    def translate(self, max_retries = 3):
         """
         Translates the given script array into another language using the chatgpt and writes to the SRT file.
-
+, 
         This function takes a script array, a range array, a model name, a video name, and a video link as input. It iterates
         through sentences and range in the script and range arrays. If the translation check fails for five times, the function
         will attempt to resolve merge sentence issues and split the sentence into smaller tokens for a better translation.
@@ -121,23 +121,27 @@ class Translator:
 
             print(f"now translating sentences {range_}")
             self.task_logger.info(f"now translating sentences {range_}")
-            flag = True
-            while flag:
-                flag = False
+            retry_count = 0
+            while retry_count < max_retries:
                 try:
                     translation = self.translator.send_request(sentence)
+                    break  # Success - exit the loop
                 except Exception as e:
-                    print("An error has occurred during translation:", e)
+                    retry_count += 1
+                    print(f"An error has occurred during translation (attempt {retry_count}/{max_retries}):", e)
                     print(traceback.format_exc())
-                    self.task_logger.debug(
-                        "An error has occurred during translation:", e
-                    )
-                    self.task_logger.info(
-                        "Retrying... the script will continue after 30 seconds."
-                    )
-                    sleep(30)
-                    flag = True
-
+                    self.task_logger.debug("An error has occurred during translation:", e)
+                    
+                    if retry_count < max_retries:
+                        self.task_logger.info(
+                            "Retrying... the script will continue after 30 seconds."
+                        )
+                        sleep(30)
+                    else:
+                        self.task_logger.warning(f"Max retries ({max_retries}) reached, skipping translation for: {sentence}")
+                        translation = ""
+                        
+            
             self.task_logger.info(f"source text: {sentence}")
             self.task_logger.info(f"translate text: {translation}")
             self.srt.set_translation(translation, range_, self.model_name, self.task_id)
