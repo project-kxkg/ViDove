@@ -1,6 +1,8 @@
 import logging
 import traceback
 from time import sleep
+import warnings
+import openai
 
 from tqdm import tqdm
 
@@ -99,7 +101,7 @@ class Translator:
         self.task_logger.info(f"System Prompt: {prompt}")
         return prompt
 
-    def translate(self, max_retries = 3):
+    def translate(self, max_retries = 1):
         """
         Translates the given script array into another language using the chatgpt and writes to the SRT file.
 , 
@@ -126,9 +128,26 @@ class Translator:
                 try:
                     translation = self.translator.send_request(sentence)
                     break  # Success - exit the loop
-                except Exception as e:
+                except openai.BadRequestError as e:
                     retry_count += 1
+                    # Access the content filter results
+                    error_response = e.response.json()
+                    filter_results = error_response['error']['innererror']['content_filter_result']
+                    
+                    # Extract categories where filtered is True
+                    filtered_categories = [
+                        category for category, details in filter_results.items()
+                        if details.get('filtered') is True
+                    ]
+                    
+                    # Optionally, you can also get categories with their severity
+                    filtered_with_severity = {
+                        category: details['severity']
+                        for category, details in filter_results.items()
+                        if details.get('filtered') is True
+                    }
                     print(f"An error has occurred during translation (attempt {retry_count}/{max_retries}):", e)
+
                     print(traceback.format_exc())
                     self.task_logger.debug("An error has occurred during translation:", e)
                     
@@ -139,9 +158,10 @@ class Translator:
                         sleep(30)
                     else:
                         self.task_logger.warning(f"Max retries ({max_retries}) reached, skipping translation for: {sentence}")
+                        self.task_logger.warning(f"Filtered categories: {' '.join(filtered_categories)} with severity: {' '.join(filtered_with_severity)}")
+                        warnings.warn(f"Max retries ({max_retries}) reached, skipping translation for: {sentence}, please check if the video contains any {filtered_categories}")
                         translation = ""
                         
-            
             self.task_logger.info(f"source text: {sentence}")
             self.task_logger.info(f"translate text: {translation}")
             self.srt.set_translation(translation, range_, self.model_name, self.task_id)
